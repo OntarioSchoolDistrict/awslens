@@ -15,3 +15,4 @@ diagrams/vpc-*/
 # Generated HTML and icon package (keep directory)
 html/
 !html/.gitkeep
+awslens.code-workspace
