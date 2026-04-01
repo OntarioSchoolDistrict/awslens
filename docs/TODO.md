@@ -16,11 +16,9 @@
 - ~~Generic YAML-driven generator~~ — no custom Python per resource type
 - ~~Multi-region data caching~~ — per-region cache files in .cache/<region>.json
 - ~~Nested field filtering~~ — supports dot-notation (e.g. DBSubnetGroup.VpcId)
+- ~~Validate HTML report~~ — `--validate` generates html/validate.html
 
 ## Open
-
-### Validate HTML report
-The `--validate` flag writes an HTML report but the generic generator doesn't include it yet. Need to port the validate report generation.
 
 ### Per-resource layout overrides
 Currently all resources use `layout_defaults`. Could add per-resource layout settings back if needed.
