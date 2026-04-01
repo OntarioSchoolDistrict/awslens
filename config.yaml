@@ -1,6 +1,6 @@
 # config.yaml - Configuration for D2 diagram generation
 
-org_name: "My Organization AWS"
+org_name: "Ontario School District"
 
 regions:
   - us-west-2

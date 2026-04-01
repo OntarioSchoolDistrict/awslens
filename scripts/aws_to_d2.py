@@ -76,6 +76,11 @@ def write_file(path, content):
     print(f"  wrote {os.path.relpath(path, REPO_ROOT)}")
 
 
+def get_scope(rdef):
+    """Return the filter scope for a resource definition."""
+    return rdef.get("filter", {}).get("scope", "vpc")
+
+
 def resolve_link(resource_defs, from_key, to_key, to_id):
     """Compute relative HTML link between two resource pages."""
     from_path = resource_defs[from_key]["links"]["html_path"]
@@ -128,6 +133,10 @@ def apply_grid(w, config):
 # Data fetching
 # ---------------------------------------------------------------------------
 
+# Services that require us-east-1 regardless of configured region
+GLOBAL_SERVICES = {"s3", "cloudfront", "route53"}
+
+
 def fetch_all(resource_defs, region):
     """Fetch AWS data for all resource types."""
     clients = {}
@@ -136,19 +145,27 @@ def fetch_all(resource_defs, region):
     for key, rdef in resource_defs.items():
         fetch = rdef["fetch"]
         service = fetch["service"]
-        if service not in clients:
-            clients[service] = boto3.client(service, region_name=region)
-        client = clients[service]
+        client_key = f"{service}:{region}"
+        if service in GLOBAL_SERVICES:
+            client_key = f"{service}:us-east-1"
+        if client_key not in clients:
+            client_region = "us-east-1" if service in GLOBAL_SERVICES else region
+            clients[client_key] = boto3.client(service, region_name=client_region)
+        client = clients[client_key]
 
         method = getattr(client, fetch["method"])
         result = method()
-        items = result[fetch["result_key"]]
-        data[key] = items
+        # Handle nested result_key like DistributionList.Items
+        items = result
+        for part in fetch["result_key"].split("."):
+            items = items.get(part) if isinstance(items, dict) else items
+        data[key] = items or []
 
     # Also fetch VPCs (always needed)
-    if "ec2" not in clients:
-        clients["ec2"] = boto3.client("ec2", region_name=region)
-    data["vpcs"] = clients["ec2"].describe_vpcs()["Vpcs"]
+    ec2_key = f"ec2:{region}"
+    if ec2_key not in clients:
+        clients[ec2_key] = boto3.client("ec2", region_name=region)
+    data["vpcs"] = clients[ec2_key].describe_vpcs()["Vpcs"]
 
     return data
 
@@ -486,6 +503,7 @@ def generate_main(config, regions):
 def generate_region(config, resource_defs, data, region):
     """Generate a region-level D2 file."""
     rid = safe_id(region)
+    enabled = config.get("resources", [])
     lines = []
     w = lines.append
 
@@ -493,6 +511,7 @@ def generate_region(config, resource_defs, data, region):
     w("  style.font-size: 24")
     w("  link: ../index.html")
     w("  style.font-color: '#000000'")
+    apply_grid(w, config)
 
     for vpc in data["vpcs"]:
         vpc_id = vpc["VpcId"]
@@ -504,12 +523,39 @@ def generate_region(config, resource_defs, data, region):
         w(f"    link: layers.{vid}")
         w("  }")
 
+    # Region/global scoped resources
+    for key in enabled:
+        if key not in resource_defs:
+            continue
+        rdef = resource_defs[key]
+        scope = get_scope(rdef)
+        if scope == "vpc":
+            continue
+        items = data.get(key, [])
+        if not items:
+            continue
+        w(f"  {rdef['key']}: \"{rdef['label']} ({len(items)})\" {{")
+        w(f"    icon: {ICONS[rdef['icon']]}")
+        w(f"    link: layers.{rdef['key']}")
+        w("  }")
+
     w("}")
     w("")
     w("layers: {")
     for vpc in data["vpcs"]:
         vid = safe_id(vpc["VpcId"])
         w(f"  {vid}: @{vpc['VpcId']}/{vpc['VpcId']}.d2")
+    for key in enabled:
+        if key not in resource_defs:
+            continue
+        rdef = resource_defs[key]
+        scope = get_scope(rdef)
+        if scope == "vpc":
+            continue
+        items = data.get(key, [])
+        if not items:
+            continue
+        w(f"  {rdef['key']}: @{region}/{rdef['links']['d2_grid']}")
     w("}")
 
     return "\n".join(lines)
@@ -536,6 +582,8 @@ def generate_vpc(config, resource_defs, data, vpc):
         if key not in resource_defs:
             continue
         rdef = resource_defs[key]
+        if get_scope(rdef) != "vpc":
+            continue
         items = filter_for_vpc(rdef, data.get(key, []), vpc_id)
         if not items:
             continue
@@ -551,6 +599,8 @@ def generate_vpc(config, resource_defs, data, vpc):
         if key not in resource_defs:
             continue
         rdef = resource_defs[key]
+        if get_scope(rdef) != "vpc":
+            continue
         items = filter_for_vpc(rdef, data.get(key, []), vpc_id)
         if not items:
             continue
@@ -792,6 +842,33 @@ def main():
         write_file(os.path.join(DIAGRAMS_DIR, f"{region}.d2"),
                    generate_region(config, resource_defs, data, region))
 
+        # Region/global scoped resources
+        region_dir = os.path.join(DIAGRAMS_DIR, region)
+        for key in config.get("resources", []):
+            if key not in resource_defs:
+                continue
+            rdef = resource_defs[key]
+            scope = get_scope(rdef)
+            if scope == "vpc":
+                continue
+            items = data.get(key, [])
+            if not items:
+                continue
+
+            write_file(
+                os.path.join(region_dir, rdef["links"]["d2_grid"]),
+                generate_grid(config, resource_defs, rdef, items),
+            )
+
+            if rdef["type"] == "drilldown" and "d2_detail" in rdef["links"]:
+                for item in items:
+                    raw_id = get_item_id(rdef, item)
+                    d2_file = rdef["links"]["d2_detail"].format(raw_id=raw_id)
+                    write_file(
+                        os.path.join(region_dir, d2_file),
+                        generate_detail(config, resource_defs, rdef, item, data),
+                    )
+
         # Per-VPC files
         for vpc in data["vpcs"]:
             vpc_id = vpc["VpcId"]
@@ -804,6 +881,8 @@ def main():
                 if key not in resource_defs:
                     continue
                 rdef = resource_defs[key]
+                if get_scope(rdef) != "vpc":
+                    continue
                 items = filter_for_vpc(rdef, data.get(key, []), vpc_id)
                 if not items:
                     continue
