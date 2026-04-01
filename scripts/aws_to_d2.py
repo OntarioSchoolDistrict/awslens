@@ -17,7 +17,7 @@ REPO_ROOT = os.path.dirname(SCRIPT_DIR)
 DIAGRAMS_DIR = os.path.join(REPO_ROOT, "diagrams")
 RESOURCES_DIR = os.path.join(SCRIPT_DIR, "resources")
 CACHE_DIR = os.path.join(REPO_ROOT, ".cache")
-CACHE_FILE = os.path.join(CACHE_DIR, "aws_data.json")
+
 CONFIG_PATH = os.path.join(REPO_ROOT, "config.yaml")
 
 # Icon paths
@@ -153,6 +153,15 @@ def fetch_all(resource_defs, region):
     return data
 
 
+def resolve_field(item, field):
+    """Resolve a dotted field path like 'DBSubnetGroup.VpcId' on an item."""
+    for part in field.split("."):
+        if item is None:
+            return None
+        item = item.get(part) if isinstance(item, dict) else None
+    return item
+
+
 def filter_for_vpc(rdef, items, vpc_id):
     """Filter items for a specific VPC using the resource definition."""
     filt = rdef.get("filter", {})
@@ -161,13 +170,15 @@ def filter_for_vpc(rdef, items, vpc_id):
     if not field:
         return items
 
-    # Handle nested field like Attachments[].VpcId
+    # Handle array bracket syntax like Attachments[].VpcId
     if "[]." in field:
-        list_field, sub_field = field.split("[].")
+        list_field, sub_field = field.split("[].", 1)
         return [item for item in items
-                if any(a.get(sub_field) == vpc_id for a in item.get(list_field, []))]
+                if any(resolve_field(a, sub_field) == vpc_id
+                       for a in item.get(list_field, []))]
 
-    return [item for item in items if item.get(field) == vpc_id]
+    # Handle dotted paths like DBSubnetGroup.VpcId
+    return [item for item in items if resolve_field(item, field) == vpc_id]
 
 
 def get_item_id(rdef, item):
@@ -585,18 +596,24 @@ def clean_generated():
     print("Cleaned generated files.")
 
 
-def save_cache(data):
+def cache_file(region):
+    return os.path.join(CACHE_DIR, f"{region}.json")
+
+
+def save_cache(data, region):
     os.makedirs(CACHE_DIR, exist_ok=True)
-    with open(CACHE_FILE, "w") as f:
+    path = cache_file(region)
+    with open(path, "w") as f:
         json.dump(data, f, default=str)
-    print(f"  cached to {os.path.relpath(CACHE_FILE, REPO_ROOT)}")
+    print(f"  cached to {os.path.relpath(path, REPO_ROOT)}")
 
 
-def load_cache():
-    if not os.path.exists(CACHE_FILE):
-        print("Error: no cached data found. Run without --dry-run first.")
+def load_cache(region):
+    path = cache_file(region)
+    if not os.path.exists(path):
+        print(f"Error: no cached data for {region}. Run without --dry-run first.")
         sys.exit(1)
-    with open(CACHE_FILE) as f:
+    with open(path) as f:
         return json.load(f)
 
 
@@ -618,11 +635,11 @@ def main():
     for region in regions:
         if args.dry_run:
             print(f"Dry run — loading cached data for {region}...")
-            data = load_cache()
+            data = load_cache(region)
         else:
             print(f"Fetching AWS data from {region}...")
             data = fetch_all(resource_defs, region)
-            save_cache(data)
+            save_cache(data, region)
 
         # Summary
         summary = [f"{len(data.get('vpcs', []))} VPCs"]
