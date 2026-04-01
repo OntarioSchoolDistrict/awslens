@@ -79,7 +79,7 @@ def get_name(tags):
 
 
 def safe_id(s):
-    return str(s).replace("-", "_").replace(".", "_").replace("/", "_")
+    return str(s).replace("-", "_").replace(".", "_").replace("/", "_").replace(":", "_")
 
 
 def write_file(path, content):
