@@ -62,7 +62,10 @@ filter:
   # Scope level:
   #   vpc    — resource belongs to a specific VPC (most common)
   #   region — resource exists at the region level, not tied to a VPC
-  #   global — resource is not region-specific (e.g. Route53, S3)
+  #   global — resource is not region-specific (e.g. Route53, S3, CloudFront)
+  #
+  # Region and global scoped resources appear on the region page alongside VPCs.
+  # VPC scoped resources appear inside each VPC page.
   scope: vpc
 
   # Field on the resource object that contains the VPC ID
