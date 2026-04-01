@@ -10,6 +10,8 @@
 - 13 pre-built resource templates in `scripts/resources/templates/` — EC2, ELB, RDS, Lambda, S3, CloudFront, Route 53, SNS, SQS, EKS, NAT Gateways, VPC Peering, VPN
 - Enrichment plugin system — `fetch.enrich` runs a post-fetch script to augment data with additional API calls
 - EKS enricher — fetches full cluster details via `describe_cluster`
+- Detail page row layout — `row` field in detail sections groups them side by side
+- EKS cross-links to subnets and security groups
 - Icons for all new resource types
 - `fetch.flatten` option for nested API responses (e.g. EC2 Reservations)
 - `fetch.wrap_as` option for string-list API responses (e.g. SQS, EKS)

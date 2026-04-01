@@ -173,6 +173,40 @@ See `scripts/resources/resource.yaml.example` for a fully documented template wi
 | `rules` | Format security group or NACL rules | Inbound/outbound rules |
 | `text` | Format a list of items as text | Route table routes |
 
+### Detail Row Layout
+
+By default, detail sections stack vertically. Add a `row` field to group sections side by side:
+
+```yaml
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      row: 1          # Info and Networking appear side by side
+      fields: [...]
+
+    - key: networking
+      label: "Networking"
+      type: fields
+      row: 1
+      fields: [...]
+
+    - key: subnets
+      label: "Subnets"
+      type: cross_link_list
+      row: 2          # Subnets and SGs appear side by side on a second row
+      ...
+
+    - key: security_groups
+      label: "Security Groups"
+      type: cross_link_list
+      row: 2
+      ...
+```
+
+Sections sharing the same `row` number are placed in a grid container. Sections without `row` render in the default vertical stack.
+
 ## Enrichment Plugins
 
 Some AWS APIs return minimal data (e.g. EKS `list_clusters` returns only names). Use an enricher to fetch additional details:
