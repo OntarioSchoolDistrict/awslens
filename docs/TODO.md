@@ -19,6 +19,3 @@
 - ~~Validate HTML report~~ — `--validate` generates html/validate.html
 
 ## Open
-
-### Per-resource layout overrides
-Currently all resources use `layout_defaults`. Could add per-resource layout settings back if needed.
