@@ -1,23 +1,39 @@
 key: eks
 label: "EKS Clusters"
 icon: eks
-type: leaf
+type: drilldown
 
 fetch:
   service: eks
   method: list_clusters
   result_key: clusters
   wrap_as: cluster_name
+  enrich: eks
 
 filter:
   scope: region
 
-id_field: cluster_name
+id_field: name
+name_field: name
 
 grid:
-  tile_label: "{cluster_name}"
+  tile_label: "{name}\n{version}"
   tile_icon: eks
 
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: eks
+      fields:
+        - name
+        - version
+        - status
+        - platformVersion
+        - endpoint
+
 links:
-  html_path: "eks.html"
+  html_path: "eks/{id}.html"
+  d2_detail: "{raw_id}.d2"
   d2_grid: "eks.d2"

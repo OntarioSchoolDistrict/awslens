@@ -188,6 +188,12 @@ def fetch_all(resource_defs, region):
         if wrap_as and items and isinstance(items[0], str):
             items = [{wrap_as: s} for s in items]
 
+        # Run enricher plugin if specified
+        enrich_name = fetch.get("enrich")
+        if enrich_name:
+            from enrichment import run_enricher
+            items = run_enricher(enrich_name, items, region)
+
         data[key] = items
 
     # Also fetch VPCs (always needed)
