@@ -1,0 +1,38 @@
+key: rds
+label: "RDS Instances"
+icon: rds
+type: drilldown
+
+fetch:
+  service: rds
+  method: describe_db_instances
+  result_key: DBInstances
+
+filter:
+  scope: vpc
+  field: DBSubnetGroup.VpcId
+
+id_field: DBInstanceIdentifier
+name_field: DBInstanceIdentifier
+
+grid:
+  tile_label: "{DBInstanceIdentifier}\n{Engine}"
+  tile_icon: rds
+
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: rds
+      fields:
+        - DBInstanceIdentifier
+        - Engine
+        - EngineVersion
+        - DBInstanceClass
+        - DBInstanceStatus
+
+links:
+  html_path: "rds/{id}.html"
+  d2_detail: "{raw_id}.d2"
+  d2_grid: "rds.d2"

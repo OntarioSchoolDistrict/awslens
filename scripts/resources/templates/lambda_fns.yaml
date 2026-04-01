@@ -1,0 +1,37 @@
+key: lambda_fns
+label: "Lambda Functions"
+icon: lambda
+type: drilldown
+
+fetch:
+  service: lambda
+  method: list_functions
+  result_key: Functions
+
+filter:
+  scope: region
+
+id_field: FunctionName
+name_field: FunctionName
+
+grid:
+  tile_label: "{FunctionName}\n{Runtime}"
+  tile_icon: lambda
+
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: lambda
+      fields:
+        - FunctionName
+        - Runtime
+        - Handler
+        - MemorySize
+        - Timeout
+
+links:
+  html_path: "lambda/{id}.html"
+  d2_detail: "{raw_id}.d2"
+  d2_grid: "lambda.d2"

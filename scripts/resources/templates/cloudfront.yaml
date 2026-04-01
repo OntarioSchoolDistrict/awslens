@@ -1,0 +1,36 @@
+key: cloudfront
+label: "CloudFront Distributions"
+icon: cloudfront
+type: drilldown
+
+fetch:
+  service: cloudfront
+  method: list_distributions
+  result_key: DistributionList.Items
+
+filter:
+  scope: global
+
+id_field: Id
+name_field: DomainName
+
+grid:
+  tile_label: "{DomainName}\n{Status}"
+  tile_icon: cloudfront
+
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: cloudfront
+      fields:
+        - Id
+        - DomainName
+        - Status
+        - Enabled
+
+links:
+  html_path: "cloudfront/{id}.html"
+  d2_detail: "{raw_id}.d2"
+  d2_grid: "cloudfront.d2"

@@ -1,0 +1,39 @@
+key: ec2_instances
+label: "EC2 Instances"
+icon: ec2
+type: drilldown
+
+fetch:
+  service: ec2
+  method: describe_instances
+  result_key: Reservations
+  flatten: "Reservations[].Instances"
+
+filter:
+  scope: vpc
+  field: VpcId
+
+id_field: InstanceId
+
+grid:
+  tile_label: "{Name}\n{InstanceType}"
+  tile_icon: ec2
+
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: ec2
+      fields:
+        - InstanceId
+        - InstanceType
+        - State
+        - PrivateIpAddress
+        - PublicIpAddress
+        - AvailabilityZone
+
+links:
+  html_path: "ec2/{id}.html"
+  d2_detail: "{raw_id}.d2"
+  d2_grid: "ec2.d2"

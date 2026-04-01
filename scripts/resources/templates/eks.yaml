@@ -1,0 +1,23 @@
+key: eks
+label: "EKS Clusters"
+icon: eks
+type: leaf
+
+fetch:
+  service: eks
+  method: list_clusters
+  result_key: clusters
+  wrap_as: cluster_name
+
+filter:
+  scope: region
+
+id_field: cluster_name
+
+grid:
+  tile_label: "{cluster_name}"
+  tile_icon: eks
+
+links:
+  html_path: "eks.html"
+  d2_grid: "eks.d2"

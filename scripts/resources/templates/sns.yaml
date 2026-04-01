@@ -1,0 +1,23 @@
+key: sns
+label: "SNS Topics"
+icon: sns
+type: leaf
+
+fetch:
+  service: sns
+  method: list_topics
+  result_key: Topics
+
+filter:
+  scope: region
+
+id_field: TopicArn
+name_field: TopicArn
+
+grid:
+  tile_label: "{TopicArn}"
+  tile_icon: sns
+
+links:
+  html_path: "sns.html"
+  d2_grid: "sns.d2"
