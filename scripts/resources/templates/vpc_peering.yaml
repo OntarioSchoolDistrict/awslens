@@ -1,0 +1,33 @@
+key: vpc_peering
+label: "VPC Peering"
+icon: vpc_peering
+type: drilldown
+
+fetch:
+  service: ec2
+  method: describe_vpc_peering_connections
+  result_key: VpcPeeringConnections
+
+filter:
+  scope: region
+
+id_field: VpcPeeringConnectionId
+
+grid:
+  tile_label: "{Name}\n{VpcPeeringConnectionId}"
+  tile_icon: vpc_peering
+
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: vpc_peering
+      fields:
+        - VpcPeeringConnectionId
+        - Status
+
+links:
+  html_path: "vpc_peering/{id}.html"
+  d2_detail: "{raw_id}.d2"
+  d2_grid: "vpc_peering.d2"

@@ -1,0 +1,23 @@
+key: route53
+label: "Route 53 Hosted Zones"
+icon: route53
+type: leaf
+
+fetch:
+  service: route53
+  method: list_hosted_zones
+  result_key: HostedZones
+
+filter:
+  scope: global
+
+id_field: Id
+name_field: Name
+
+grid:
+  tile_label: "{Name}"
+  tile_icon: route53
+
+links:
+  html_path: "route53.html"
+  d2_grid: "route53.d2"

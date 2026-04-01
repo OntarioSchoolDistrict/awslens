@@ -1,0 +1,23 @@
+key: s3
+label: "S3 Buckets"
+icon: s3
+type: leaf
+
+fetch:
+  service: s3
+  method: list_buckets
+  result_key: Buckets
+
+filter:
+  scope: global
+
+id_field: Name
+name_field: Name
+
+grid:
+  tile_label: "{Name}"
+  tile_icon: s3
+
+links:
+  html_path: "s3.html"
+  d2_grid: "s3.d2"

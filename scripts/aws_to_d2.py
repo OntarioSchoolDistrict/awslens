@@ -31,7 +31,20 @@ ICONS = {
     "igw": f"{ICON_RES}/Res_Amazon-VPC_Internet-Gateway_48.svg",
     "route_table": f"{ICON_RES}/Res_Amazon-Route-53_Route-Table_48.svg",
     "nacl": f"{ICON_RES}/Res_Amazon-VPC_Network-Access-Control-List_48.svg",
-    "security_group": f"{ICON_BASE}/Architecture-Service-Icons_01302026/Arch_Security-Identity/64/Arch_AWS-Network-Firewall_64.svg",
+    "security_group": f"{ICON_SVC}/Arch_Security-Identity/64/Arch_AWS-Network-Firewall_64.svg",
+    "nat_gateway": f"{ICON_RES}/Res_Amazon-VPC_NAT-Gateway_48.svg",
+    "ec2": f"{ICON_SVC}/Arch_Compute/64/Arch_Amazon-EC2_64.svg",
+    "elb": f"{ICON_SVC}/Arch_Networking-Content-Delivery/64/Arch_Elastic-Load-Balancing_64.svg",
+    "rds": f"{ICON_SVC}/Arch_Databases/64/Arch_Amazon-RDS_64.svg",
+    "lambda": f"{ICON_SVC}/Arch_Compute/64/Arch_AWS-Lambda_64.svg",
+    "s3": f"{ICON_SVC}/Arch_Storage/64/Arch_Amazon-Simple-Storage-Service_64.svg",
+    "cloudfront": f"{ICON_SVC}/Arch_Networking-Content-Delivery/64/Arch_Amazon-CloudFront_64.svg",
+    "sns": f"{ICON_SVC}/Arch_Application-Integration/64/Arch_Amazon-Simple-Notification-Service_64.svg",
+    "sqs": f"{ICON_SVC}/Arch_Application-Integration/64/Arch_Amazon-Simple-Queue-Service_64.svg",
+    "eks": f"{ICON_SVC}/Arch_Containers/64/Arch_Amazon-Elastic-Kubernetes-Service_64.svg",
+    "vpc_peering": f"{ICON_RES}/Res_Amazon-VPC_Peering-Connection_48.svg",
+    "vpn": f"{ICON_RES}/Res_Amazon-VPC_VPN-Connection_48.svg",
+    "route53": f"{ICON_SVC}/Arch_Networking-Content-Delivery/64/Arch_Amazon-Route-53_64.svg",
 }
 
 
@@ -66,7 +79,7 @@ def get_name(tags):
 
 
 def safe_id(s):
-    return str(s).replace("-", "_").replace(".", "_").replace("/", "_")
+    return str(s).replace("-", "_").replace(".", "_").replace("/", "_").replace(":", "_")
 
 
 def write_file(path, content):
@@ -159,7 +172,23 @@ def fetch_all(resource_defs, region):
         items = result
         for part in fetch["result_key"].split("."):
             items = items.get(part) if isinstance(items, dict) else items
-        data[key] = items or []
+        items = items or []
+
+        # Flatten nested lists (e.g. Reservations[].Instances[])
+        flatten = fetch.get("flatten")
+        if flatten and items:
+            list_field, sub_field = flatten.split("[].")
+            flat = []
+            for outer in items:
+                flat.extend(outer.get(sub_field, []))
+            items = flat
+
+        # Convert string lists to dicts (e.g. SQS QueueUrls, EKS cluster names)
+        wrap_as = fetch.get("wrap_as")
+        if wrap_as and items and isinstance(items[0], str):
+            items = [{wrap_as: s} for s in items]
+
+        data[key] = items
 
     # Also fetch VPCs (always needed)
     ec2_key = f"ec2:{region}"
@@ -622,7 +651,7 @@ VALIDATE_CHECKS = {
     "ec2_instances":  {"service": "ec2",            "method": "describe_instances",             "result_key": "Reservations",          "label": "EC2 Instances"},
     "elb":            {"service": "elbv2",          "method": "describe_load_balancers",        "result_key": "LoadBalancers",         "label": "Load Balancers"},
     "rds":            {"service": "rds",            "method": "describe_db_instances",           "result_key": "DBInstances",           "label": "RDS Instances"},
-    "lambda":         {"service": "lambda",         "method": "list_functions",                 "result_key": "Functions",             "label": "Lambda Functions"},
+    "lambda_fns":    {"service": "lambda",         "method": "list_functions",                 "result_key": "Functions",             "label": "Lambda Functions"},
     "s3":             {"service": "s3",             "method": "list_buckets",                   "result_key": "Buckets",               "label": "S3 Buckets"},
     "cloudfront":     {"service": "cloudfront",     "method": "list_distributions",             "result_key": "DistributionList.Items","label": "CloudFront Distributions"},
     "sns":            {"service": "sns",            "method": "list_topics",                    "result_key": "Topics",                "label": "SNS Topics"},

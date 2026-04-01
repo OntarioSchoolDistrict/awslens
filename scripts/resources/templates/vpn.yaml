@@ -1,0 +1,36 @@
+key: vpn
+label: "VPN Connections"
+icon: vpn
+type: drilldown
+
+fetch:
+  service: ec2
+  method: describe_vpn_connections
+  result_key: VpnConnections
+
+filter:
+  scope: region
+
+id_field: VpnConnectionId
+
+grid:
+  tile_label: "{Name}\n{State}"
+  tile_icon: vpn
+
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: vpn
+      fields:
+        - VpnConnectionId
+        - State
+        - Type
+        - VpnGatewayId
+        - CustomerGatewayId
+
+links:
+  html_path: "vpn/{id}.html"
+  d2_detail: "{raw_id}.d2"
+  d2_grid: "vpn.d2"

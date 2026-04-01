@@ -19,3 +19,11 @@
 - ~~Validate HTML report~~ — `--validate` generates html/validate.html
 
 ## Open
+
+## Investigate
+
+### Scope labels on region page
+Add "(Region)" or "(Global)" captions to resource tiles on the region page to visually distinguish them from VPC tiles.
+
+### Indirect VPC filtering (through relationships)
+VPN Connections and VPC Peering are currently region-scoped but logically belong to VPCs. Implement `through` filtering so resources can be scoped to a VPC via an intermediate resource (e.g. VPN → VPN Gateway → VPC attachment).

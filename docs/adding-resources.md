@@ -4,12 +4,34 @@ This document describes how to add a new AWS resource type to the diagrams.
 
 ## Quick Start
 
-1. Copy `scripts/resources/resource.yaml.example` to `scripts/resources/<key>.yaml`
-2. Fill in the YAML sections (see below)
-3. Add the key to the `resources` list in `config.yaml`
-4. Run `python3 scripts/aws_to_d2.py && bash scripts/build.sh`
+Pre-built templates are available in `scripts/resources/templates/` for common AWS resource types. To enable one:
 
-That's it for most resource types. No Python code needed.
+1. Copy it to `scripts/resources/`:
+   ```bash
+   cp scripts/resources/templates/rds.yaml scripts/resources/
+   ```
+2. Add the key to the `resources` list in `config.yaml`
+3. Run `python3 scripts/aws_to_d2.py && bash scripts/build.sh`
+
+Available templates:
+
+| Template | Key | Scope |
+|----------|-----|-------|
+| `cloudfront.yaml` | `cloudfront` | global |
+| `ec2_instances.yaml` | `ec2_instances` | vpc |
+| `eks.yaml` | `eks` | region |
+| `elb.yaml` | `elb` | vpc |
+| `lambda_fns.yaml` | `lambda_fns` | region |
+| `nat_gateways.yaml` | `nat_gateways` | vpc |
+| `rds.yaml` | `rds` | vpc |
+| `route53.yaml` | `route53` | global |
+| `s3.yaml` | `s3` | global |
+| `sns.yaml` | `sns` | region |
+| `sqs.yaml` | `sqs` | region |
+| `vpc_peering.yaml` | `vpc_peering` | region |
+| `vpn.yaml` | `vpn` | region |
+
+To create a resource from scratch instead, copy `scripts/resources/resource.yaml.example` and fill in the sections.
 
 ## Step-by-Step Example: Adding RDS
 

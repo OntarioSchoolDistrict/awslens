@@ -1,0 +1,38 @@
+key: elb
+label: "Load Balancers"
+icon: elb
+type: drilldown
+
+fetch:
+  service: elbv2
+  method: describe_load_balancers
+  result_key: LoadBalancers
+
+filter:
+  scope: vpc
+  field: VpcId
+
+id_field: LoadBalancerName
+name_field: LoadBalancerName
+
+grid:
+  tile_label: "{LoadBalancerName}\n{Type}"
+  tile_icon: elb
+
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: elb
+      fields:
+        - LoadBalancerName
+        - Type
+        - Scheme
+        - DNSName
+        - State
+
+links:
+  html_path: "elb/{id}.html"
+  d2_detail: "{raw_id}.d2"
+  d2_grid: "elb.d2"

@@ -1,0 +1,24 @@
+key: sqs
+label: "SQS Queues"
+icon: sqs
+type: leaf
+
+fetch:
+  service: sqs
+  method: list_queues
+  result_key: QueueUrls
+  wrap_as: QueueUrl
+
+filter:
+  scope: region
+
+id_field: QueueUrl
+name_field: QueueUrl
+
+grid:
+  tile_label: "{QueueUrl}"
+  tile_icon: sqs
+
+links:
+  html_path: "sqs.html"
+  d2_grid: "sqs.d2"

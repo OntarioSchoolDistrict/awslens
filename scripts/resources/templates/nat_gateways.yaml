@@ -1,0 +1,23 @@
+key: nat_gateways
+label: "NAT Gateways"
+icon: nat_gateway
+type: leaf
+
+fetch:
+  service: ec2
+  method: describe_nat_gateways
+  result_key: NatGateways
+
+filter:
+  scope: vpc
+  field: VpcId
+
+id_field: NatGatewayId
+
+grid:
+  tile_label: "{Name}\n{State}"
+  tile_icon: nat_gateway
+
+links:
+  html_path: "nat_gateways.html"
+  d2_grid: "nat_gateways.d2"
