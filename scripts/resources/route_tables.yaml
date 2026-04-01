@@ -1,0 +1,47 @@
+key: route_tables
+label: "Route Tables"
+icon: route_table
+type: drilldown
+
+fetch:
+  service: ec2
+  method: describe_route_tables
+  result_key: RouteTables
+
+filter:
+  scope: vpc
+  field: VpcId
+
+id_field: RouteTableId
+
+grid:
+  tile_label: "{Name}\n{main_or_custom}\n{route_count} routes, {subnet_count} subnets"
+  tile_icon: route_table
+
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: route_table
+      fields:
+        - RouteTableId
+        - main_or_custom
+
+    - key: routes
+      label: "Routes"
+      type: text
+      source: Routes
+      template: "{DestinationCidrBlock} → {target} ({State})"
+
+    - key: subnets
+      label: "Associated Subnets"
+      type: cross_link_list
+      icon: subnet
+      target: subnets
+      lookup: subnets_for_route_table
+
+links:
+  html_path: "route_tables/{id}.html"
+  d2_detail: "{raw_id}.d2"
+  d2_grid: "route_tables.d2"

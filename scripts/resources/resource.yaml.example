@@ -1,0 +1,181 @@
+# resource.yaml.example
+#
+# Template for defining an AWS resource type in the D2 diagram system.
+# Copy this file and rename it to <resource_key>.yaml to add a new resource.
+#
+# The generic generator reads these files and produces D2 diagrams
+# without any custom Python code for most resource types.
+
+# ---------------------------------------------------------------------------
+# Identity
+#
+# Defines what this resource is and how it appears in the system.
+# ---------------------------------------------------------------------------
+
+# Unique key used throughout the system (registry, config, filenames)
+key: example_resource
+
+# Display name shown on VPC tiles and page titles
+label: "Example Resource"
+
+# Icon key from ICONS dict in __init__.py
+# Find available icons: find html/aws-icon-package -name "*keyword*64.svg"
+icon: subnet
+
+# Page type:
+#   drilldown — grid page with clickable tiles that link to detail pages
+#   leaf      — single page listing all items, no detail drill-down
+type: drilldown
+
+# ---------------------------------------------------------------------------
+# Data
+#
+# How to fetch this resource from AWS and identify individual items.
+# ---------------------------------------------------------------------------
+
+fetch:
+  # AWS service name (as used in boto3.client)
+  service: ec2
+
+  # boto3 method to call
+  method: describe_subnets
+
+  # Key in the API response that contains the list of items
+  result_key: Subnets
+
+  # Optional: filters passed to the API call
+  # filters:
+  #   - Name: state
+  #     Values: [available]
+
+  # Optional: for resources nested inside another structure (like EC2
+  # instances inside Reservations), define how to flatten the response
+  # flatten: "Reservations[].Instances[]"
+
+# ---------------------------------------------------------------------------
+# Filter
+#
+# How to scope this resource to a VPC.
+# ---------------------------------------------------------------------------
+
+filter:
+  # Scope level:
+  #   vpc    — resource belongs to a specific VPC (most common)
+  #   region — resource exists at the region level, not tied to a VPC
+  #   global — resource is not region-specific (e.g. Route53, S3)
+  scope: vpc
+
+  # Field on the resource object that contains the VPC ID
+  # Used to filter items for a specific VPC
+  field: VpcId
+
+  # For indirect filtering where the VPC relationship goes through
+  # another resource (e.g. VPN connections through VPN gateways):
+  # through: vpn_gateways
+  # through_field: VpcAttachments[].VpcId
+  # match_field: VpnGatewayId
+
+# Unique identifier field on each item
+# Used for D2 shape IDs, filenames, and cross-linking
+id_field: SubnetId
+
+# Optional: field to use as the display name
+# Falls back to the Name tag, then id_field
+name_field: null
+
+# ---------------------------------------------------------------------------
+# Grid Layout
+#
+# How items appear on the grid/list page.
+# Only used when type is "drilldown".
+# ---------------------------------------------------------------------------
+
+grid:
+  # Optional: group items by this field before displaying
+  # Creates nested containers on the grid page (e.g. AZ grouping for subnets)
+  group_by: AvailabilityZone
+
+  # Label template for each tile on the grid page
+  # Use {FieldName} for AWS fields, {Name} for the Name tag
+  tile_label: "{Name}\n{CidrBlock}"
+
+  # Icon for each tile (defaults to the resource icon if not specified)
+  tile_icon: subnet
+
+# ---------------------------------------------------------------------------
+# Detail Layout
+#
+# What to show on individual resource detail pages.
+# Only used when type is "drilldown".
+# Each section becomes a box on the detail page.
+# ---------------------------------------------------------------------------
+
+detail:
+  sections:
+    # --- Simple field display ---
+    # Shows fields from the resource object as text
+    - key: info
+      label: "Info"
+      icon: subnet
+      type: fields
+      fields:
+        - SubnetId
+        - CidrBlock
+        - AvailabilityZone
+        - MapPublicIpOnLaunch
+
+    # --- Cross-link to a single related resource ---
+    # Shows a clickable box that links to another resource's detail page
+    - key: route_table
+      label: "Route Table"
+      type: cross_link
+      icon: route_table
+      target: route_tables          # resource key to link to
+      lookup: route_table_for_subnet  # Python function name in lookups.py
+
+    # --- Cross-link to multiple related resources ---
+    # Shows a container with clickable items linking to detail pages
+    - key: security_groups
+      label: "Security Groups"
+      type: cross_link_list
+      icon: security_group
+      target: security_groups
+      lookup: security_groups_for_subnet
+      sub_container: subnet_security_groups  # config.yaml sub_container key
+
+    # --- Formatted rules display ---
+    # For resources with rule-based data (security groups, NACLs)
+    - key: inbound
+      label: "Inbound Rules"
+      type: rules
+      source: IpPermissions         # field containing the rules
+      direction: inbound
+
+    # --- Raw text display ---
+    # Shows a block of pre-formatted text
+    - key: routes
+      label: "Routes"
+      type: text
+      template: "{DestinationCidrBlock} → {GatewayId}"
+      source: Routes                # field containing the list
+
+# ---------------------------------------------------------------------------
+# Links
+#
+# Where this resource's pages live in the HTML hierarchy.
+# Used for back links, cross-links, and D2 file naming.
+# ---------------------------------------------------------------------------
+
+links:
+  # HTML path pattern relative to the VPC directory
+  # {id} is replaced with safe_id(resource_id)
+  # With "/" — drilldown type, pages go in a subdirectory
+  # Without "/" — leaf type, page is a sibling of VPC index
+  html_path: "subnets/{id}.html"
+
+  # D2 detail filename pattern
+  # {raw_id} is replaced with the original AWS ID
+  d2_detail: "{raw_id}.d2"
+
+  # D2 grid/list filename
+  d2_grid: "subnets.d2"

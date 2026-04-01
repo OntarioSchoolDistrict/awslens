@@ -1,0 +1,22 @@
+key: igw
+label: "Internet Gateway"
+icon: igw
+type: leaf
+
+fetch:
+  service: ec2
+  method: describe_internet_gateways
+  result_key: InternetGateways
+
+filter:
+  scope: vpc
+  field: Attachments[].VpcId
+
+id_field: InternetGatewayId
+
+grid:
+  tile_label: "{Name}"
+
+links:
+  html_path: "igw.html"
+  d2_grid: "igw.d2"

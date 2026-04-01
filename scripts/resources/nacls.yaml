@@ -1,0 +1,54 @@
+key: nacls
+label: "Network ACLs"
+icon: nacl
+type: drilldown
+
+fetch:
+  service: ec2
+  method: describe_network_acls
+  result_key: NetworkAcls
+
+filter:
+  scope: vpc
+  field: VpcId
+
+id_field: NetworkAclId
+
+grid:
+  tile_label: "{Name}\n{default_or_custom}\n{subnet_count} subnets"
+  tile_icon: nacl
+
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: nacl
+      fields:
+        - NetworkAclId
+        - default_or_custom
+
+    - key: inbound
+      label: "Inbound Rules"
+      type: rules
+      source: Entries
+      direction: inbound
+
+    - key: outbound
+      label: "Outbound Rules"
+      type: rules
+      source: Entries
+      direction: outbound
+
+    - key: subnets
+      label: "Associated Subnets"
+      type: cross_link_list
+      icon: subnet
+      target: subnets
+      lookup: subnets_for_nacl
+      sub_container: nacl_subnets
+
+links:
+  html_path: "nacls/{id}.html"
+  d2_detail: "{raw_id}.d2"
+  d2_grid: "nacls.d2"

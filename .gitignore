@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+venv/
+.venv/
+.cache/
+
+# Generated D2 files (keep directory)
+diagrams/aws-icon-package
+diagrams/*.d2
+diagrams/vpc-*/
+!diagrams/.gitkeep
+
+# Generated HTML and icon package (keep directory)
+html/
+!html/.gitkeep

@@ -1,0 +1,29 @@
+# config.yaml - Configuration for D2 diagram generation
+
+org_name: "My Organization AWS"
+
+regions:
+  - us-west-2
+
+# AWS resource types to include in diagrams
+# Every AWS account has these by default
+resources:
+  - subnets
+  - igw
+  - route_tables
+  - nacls
+  - security_groups
+
+# Default layout settings applied to all resource types and sub-containers
+layout_defaults:
+  grid_columns: 2
+  grid_gap: null
+  tile_width: null
+  tile_height: null
+  tile_font_size: null
+
+# Sub-container layout overrides (used inside detail pages)
+sub_containers:
+  - vpc_tiles
+  - subnet_security_groups
+  - nacl_subnets

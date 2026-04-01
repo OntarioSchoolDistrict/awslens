@@ -1,0 +1,48 @@
+key: security_groups
+label: "Security Groups"
+icon: security_group
+type: drilldown
+
+fetch:
+  service: ec2
+  method: describe_security_groups
+  result_key: SecurityGroups
+
+filter:
+  scope: vpc
+  field: VpcId
+
+id_field: GroupId
+name_field: GroupName
+
+grid:
+  tile_label: "{GroupName}\n{inbound_count} inbound, {outbound_count} outbound"
+  tile_icon: security_group
+
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: security_group
+      fields:
+        - GroupId
+        - GroupName
+        - Description
+
+    - key: inbound
+      label: "Inbound Rules"
+      type: rules
+      source: IpPermissions
+      direction: inbound
+
+    - key: outbound
+      label: "Outbound Rules"
+      type: rules
+      source: IpPermissionsEgress
+      direction: outbound
+
+links:
+  html_path: "security_groups/{id}.html"
+  d2_detail: "{raw_id}.d2"
+  d2_grid: "security_groups.d2"

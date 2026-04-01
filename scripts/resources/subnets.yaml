@@ -1,0 +1,59 @@
+key: subnets
+label: "Subnets"
+icon: subnet
+type: drilldown
+
+fetch:
+  service: ec2
+  method: describe_subnets
+  result_key: Subnets
+
+filter:
+  scope: vpc
+  field: VpcId
+
+id_field: SubnetId
+
+grid:
+  group_by: AvailabilityZone
+  tile_label: "{Name}\n{CidrBlock}"
+  tile_icon: subnet
+
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      icon: subnet
+      fields:
+        - SubnetId
+        - CidrBlock
+        - AvailabilityZone
+        - MapPublicIpOnLaunch
+
+    - key: route_table
+      label: "Route Table"
+      type: cross_link
+      icon: route_table
+      target: route_tables
+      lookup: route_table_for_subnet
+
+    - key: nacl
+      label: "Network ACL"
+      type: cross_link
+      icon: nacl
+      target: nacls
+      lookup: nacl_for_subnet
+
+    - key: security_groups
+      label: "Security Groups"
+      type: cross_link_list
+      icon: security_group
+      target: security_groups
+      lookup: security_groups_for_subnet
+      sub_container: subnet_security_groups
+
+links:
+  html_path: "subnets/{id}.html"
+  d2_detail: "{raw_id}.d2"
+  d2_grid: "subnets.d2"
