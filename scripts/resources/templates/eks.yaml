@@ -17,7 +17,7 @@ id_field: name
 name_field: name
 
 grid:
-  tile_label: "{name}\n{version}"
+  tile_label: "{name}\n{version} | {nodeGroupCount} node groups"
   tile_icon: eks
 
 detail:
@@ -26,12 +26,55 @@ detail:
       label: "Info"
       type: fields
       icon: eks
+      row: 1
       fields:
         - name
         - version
         - status
         - platformVersion
+        - createdAt
+
+    - key: networking
+      label: "Networking"
+      type: fields
+      icon: vpc
+      row: 1
+      fields:
         - endpoint
+        - endpointPublicAccess
+        - endpointPrivateAccess
+
+    - key: node_groups
+      label: "Node Groups"
+      type: fields
+      icon: eks
+      row: 2
+      fields:
+        - nodeGroupSummary
+
+    - key: subnets
+      label: "Cluster Subnets"
+      type: cross_link_list
+      icon: subnet
+      target: subnets
+      lookup: subnets_for_eks
+      row: 3
+
+    - key: ng_subnets
+      label: "Node Group Subnets"
+      type: cross_link_list
+      icon: subnet
+      target: subnets
+      lookup: subnets_for_eks_nodegroups
+      row: 3
+
+    - key: security_groups
+      label: "Security Groups"
+      type: cross_link_list
+      icon: security_group
+      target: security_groups
+      lookup: security_groups_for_eks
+      row: 4
 
 links:
   html_path: "eks/{id}.html"

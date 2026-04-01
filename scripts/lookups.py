@@ -87,6 +87,12 @@ def security_groups_for_eks(data, cluster):
     return [sg for sg in data.get("security_groups", []) if sg["GroupId"] in sg_ids]
 
 
+def subnets_for_eks_nodegroups(data, cluster):
+    """Find subnets used by EKS node groups."""
+    subnet_ids = cluster.get("nodeGroupSubnetIds", [])
+    return [s for s in data.get("subnets", []) if s["SubnetId"] in subnet_ids]
+
+
 LOOKUPS = {
     "route_table_for_subnet": route_table_for_subnet,
     "nacl_for_subnet": nacl_for_subnet,
@@ -95,4 +101,5 @@ LOOKUPS = {
     "subnets_for_nacl": subnets_for_nacl,
     "subnets_for_eks": subnets_for_eks,
     "security_groups_for_eks": security_groups_for_eks,
+    "subnets_for_eks_nodegroups": subnets_for_eks_nodegroups,
 }
