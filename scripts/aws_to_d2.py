@@ -561,6 +561,128 @@ def generate_vpc(config, resource_defs, data, vpc):
 
 
 # ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+
+VALIDATE_CHECKS = {
+    "subnets":        {"service": "ec2",            "method": "describe_subnets",               "result_key": "Subnets",               "label": "Subnets"},
+    "igw":            {"service": "ec2",            "method": "describe_internet_gateways",     "result_key": "InternetGateways",      "label": "Internet Gateways"},
+    "route_tables":   {"service": "ec2",            "method": "describe_route_tables",          "result_key": "RouteTables",           "label": "Route Tables"},
+    "nacls":          {"service": "ec2",            "method": "describe_network_acls",          "result_key": "NetworkAcls",           "label": "Network ACLs"},
+    "security_groups":{"service": "ec2",            "method": "describe_security_groups",       "result_key": "SecurityGroups",        "label": "Security Groups"},
+    "nat_gateways":   {"service": "ec2",            "method": "describe_nat_gateways",          "result_key": "NatGateways",           "label": "NAT Gateways"},
+    "ec2_instances":  {"service": "ec2",            "method": "describe_instances",             "result_key": "Reservations",          "label": "EC2 Instances"},
+    "elb":            {"service": "elbv2",          "method": "describe_load_balancers",        "result_key": "LoadBalancers",         "label": "Load Balancers"},
+    "rds":            {"service": "rds",            "method": "describe_db_instances",           "result_key": "DBInstances",           "label": "RDS Instances"},
+    "lambda":         {"service": "lambda",         "method": "list_functions",                 "result_key": "Functions",             "label": "Lambda Functions"},
+    "s3":             {"service": "s3",             "method": "list_buckets",                   "result_key": "Buckets",               "label": "S3 Buckets"},
+    "cloudfront":     {"service": "cloudfront",     "method": "list_distributions",             "result_key": "DistributionList.Items","label": "CloudFront Distributions"},
+    "sns":            {"service": "sns",            "method": "list_topics",                    "result_key": "Topics",                "label": "SNS Topics"},
+    "sqs":            {"service": "sqs",            "method": "list_queues",                    "result_key": "QueueUrls",             "label": "SQS Queues"},
+    "eks":            {"service": "eks",            "method": "list_clusters",                  "result_key": "clusters",              "label": "EKS Clusters"},
+    "vpc_peering":    {"service": "ec2",            "method": "describe_vpc_peering_connections","result_key": "VpcPeeringConnections", "label": "VPC Peering Connections"},
+    "vpn":            {"service": "ec2",            "method": "describe_vpn_connections",       "result_key": "VpnConnections",        "label": "VPN Connections"},
+    "route53":        {"service": "route53",        "method": "list_hosted_zones",              "result_key": "HostedZones",           "label": "Route 53 Hosted Zones"},
+}
+
+
+def run_validate(config, resource_defs, region):
+    """Query AWS for well-known resource types and compare against registered resources."""
+    registered = set(config.get("resources", []))
+    clients = {}
+    found_registered = []
+    found_unregistered = []
+
+    for key, check in VALIDATE_CHECKS.items():
+        service = check["service"]
+        try:
+            if service not in clients:
+                region_arg = region
+                if service in ("s3", "cloudfront", "route53"):
+                    region_arg = "us-east-1"
+                clients[service] = boto3.client(service, region_name=region_arg)
+            result = getattr(clients[service], check["method"])()
+            # Handle nested result_key like DistributionList.Items
+            items = result
+            for part in check["result_key"].split("."):
+                items = items.get(part) if isinstance(items, dict) else items
+            count = len(items) if items else 0
+        except Exception:
+            count = 0
+
+        if count == 0:
+            continue
+
+        entry = {"key": key, "label": check["label"], "count": count}
+        if key in registered:
+            found_registered.append(entry)
+        else:
+            found_unregistered.append(entry)
+
+    return found_registered, found_unregistered
+
+
+def generate_validate_html(config, region, registered, unregistered):
+    """Generate the validation HTML report."""
+    org_name = config.get("org_name", "AWS")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    rows_reg = ""
+    for r in registered:
+        rows_reg += f'        <tr><td>{r["label"]}</td><td class="count">{r["count"]}</td></tr>\n'
+
+    rows_unreg = ""
+    for r in unregistered:
+        rows_unreg += (f'        <tr><td>{r["label"]}</td><td class="count">{r["count"]}</td>'
+                       f'<td class="unregistered">Not registered</td></tr>\n')
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Validation Report &mdash; {org_name}</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #333; }}
+        h1 {{ color: #232f3e; border-bottom: 2px solid #ff9900; padding-bottom: 10px; }}
+        h2 {{ color: #232f3e; margin-top: 30px; }}
+        .timestamp {{ color: #666; font-size: 14px; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 15px 0; }}
+        th, td {{ border: 1px solid #ddd; padding: 10px 15px; text-align: left; }}
+        th {{ background: #232f3e; color: white; }}
+        tr:nth-child(even) {{ background: #f9f9f9; }}
+        .registered {{ color: #1a8754; font-weight: bold; }}
+        .unregistered {{ color: #dc3545; font-weight: bold; }}
+        .count {{ text-align: right; font-family: monospace; }}
+        .summary {{ background: #f0f0f0; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+        a {{ color: #0073bb; }}
+    </style>
+</head>
+<body>
+    <h1>Validation Report</h1>
+    <p class="timestamp">Generated: {timestamp} &mdash; Region: {region}</p>
+    <p><a href="main/index.html">&larr; Back to diagrams</a></p>
+
+    <div class="summary">
+        <strong>{len(registered)}</strong> registered resource types found &mdash;
+        <strong>{len(unregistered)}</strong> AWS resource types not yet registered
+    </div>
+
+    <h2>Registered Resources</h2>
+    <table>
+        <tr><th>Resource Type</th><th class="count">Count</th></tr>
+{rows_reg}    </table>
+
+    <h2>Not Yet Registered</h2>
+    <p>These AWS resources exist in the account but are not in the diagram registry.</p>
+    <table>
+        <tr><th>Resource Type</th><th class="count">Count</th><th>Status</th></tr>
+{rows_unreg}    </table>
+</body>
+</html>
+"""
+
+
+# ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
 
@@ -649,7 +771,16 @@ def main():
         print(f"  {', '.join(summary)}")
 
         if args.validate:
-            print("\nValidation not yet implemented for generic generator.")
+            print(f"\nValidating AWS resources for {region}...")
+            registered, unregistered = run_validate(config, resource_defs, region)
+            html_dir = os.path.join(REPO_ROOT, "html")
+            html = generate_validate_html(config, region, registered, unregistered)
+            write_file(os.path.join(html_dir, "validate.html"), html)
+            for r in registered:
+                print(f"  ✓ {r['label']}: {r['count']}")
+            for r in unregistered:
+                print(f"  ✗ {r['label']}: {r['count']} (not registered)")
+            print(f"\nReport: html/validate.html")
             return
 
         print("Generating D2 files...")

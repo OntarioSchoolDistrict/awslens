@@ -32,6 +32,16 @@ Edit `config.yaml` to customize:
 
 See `docs/custom-layouts.md` for details.
 
+## Getting Started
+
+Run `--validate` first to see what AWS resources exist in your account:
+
+```bash
+python3 scripts/aws_to_d2.py --validate
+```
+
+This generates `html/validate.html` showing which resource types are registered and which aren't. Use this to decide what to add — see `docs/adding-resources.md`.
+
 ## Usage
 
 ```bash

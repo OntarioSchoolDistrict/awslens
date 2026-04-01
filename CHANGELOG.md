@@ -5,6 +5,7 @@
 ### Added
 - Per-region data caching — `--dry-run` now uses `.cache/<region>.json` instead of a single cache file, enabling multi-region workflows
 - Nested dot-notation field filtering — `filter.field` now supports paths like `DBSubnetGroup.VpcId` in addition to the existing `Attachments[].VpcId` bracket syntax
+- Validate HTML report — `--validate` now queries AWS for well-known resource types and generates `html/validate.html` showing registered vs unregistered resources
 
 ## [0.0.1] - 2026-04-01
 
