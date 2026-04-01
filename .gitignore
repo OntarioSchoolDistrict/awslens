@@ -10,9 +10,16 @@ venv/
 diagrams/aws-icon-package
 diagrams/*.d2
 diagrams/vpc-*/
+diagrams/us-*/
+diagrams/eu-*/
+diagrams/ap-*/
+diagrams/sa-*/
+diagrams/ca-*/
+diagrams/me-*/
+diagrams/af-*/
 !diagrams/.gitkeep
 
 # Generated HTML and icon package (keep directory)
-html/
+html/*
 !html/.gitkeep
 awslens.code-workspace

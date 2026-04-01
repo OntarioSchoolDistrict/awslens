@@ -66,16 +66,19 @@ aws_to_d2.py
 ```
 My Organization AWS                  # main.d2
 └── us-west-2                        # us-west-2.d2 (region layer)
-    └── vpc-xxxxxxxx                 # vpc-xxxxxxxx.d2 (VPC layer)
-        ├── Subnets                  # subnets.d2 (drilldown)
-        │   └── subnet-xxx          # subnet-xxx.d2 (detail)
-        ├── Internet Gateway         # igw.d2 (leaf)
-        ├── Route Tables             # route_tables.d2 (drilldown)
-        │   └── rtb-xxx             # rtb-xxx.d2 (detail)
-        ├── Network ACLs             # nacls.d2 (drilldown)
-        │   └── acl-xxx             # acl-xxx.d2 (detail)
-        └── Security Groups          # security_groups.d2 (drilldown)
-            └── sg-xxx              # sg-xxx.d2 (detail)
+    ├── vpc-xxxxxxxx                 # vpc-xxxxxxxx.d2 (VPC layer)
+    │   ├── Subnets                  # subnets.d2 (drilldown)
+    │   │   └── subnet-xxx          # subnet-xxx.d2 (detail)
+    │   ├── Internet Gateway         # igw.d2 (leaf)
+    │   ├── Route Tables             # route_tables.d2 (drilldown)
+    │   │   └── rtb-xxx             # rtb-xxx.d2 (detail)
+    │   ├── Network ACLs             # nacls.d2 (drilldown)
+    │   │   └── acl-xxx             # acl-xxx.d2 (detail)
+    │   └── Security Groups          # security_groups.d2 (drilldown)
+    │       └── sg-xxx              # sg-xxx.d2 (detail)
+    ├── Lambda Functions             # lambda.d2 (region-scoped)
+    │   └── fn-xxx                  # fn-xxx.d2 (detail)
+    └── S3 Buckets                   # s3.d2 (global-scoped)
 ```
 
 ## Resource YAML Structure
