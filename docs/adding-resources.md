@@ -155,6 +155,7 @@ detail:
 | Layout (grid columns, etc.) | ✅ (from layout_defaults) | |
 | Resource definition | | ✅ (write YAML file) |
 | Icon selection | | ✅ (find SVG, add to ICONS) |
+| Enrichment plugins | | ✅ (if needed, write enricher script) |
 | Cross-link lookups | | ✅ (if needed, write lookup function) |
 | Add to config.yaml | | ✅ (one line) |
 
@@ -171,6 +172,61 @@ See `scripts/resources/resource.yaml.example` for a fully documented template wi
 | `cross_link_list` | Link to multiple related resources | Subnet → Security Groups |
 | `rules` | Format security group or NACL rules | Inbound/outbound rules |
 | `text` | Format a list of items as text | Route table routes |
+
+### Detail Row Layout
+
+By default, detail sections stack vertically. Add a `row` field to group sections side by side:
+
+```yaml
+detail:
+  sections:
+    - key: info
+      label: "Info"
+      type: fields
+      row: 1          # Info and Networking appear side by side
+      fields: [...]
+
+    - key: networking
+      label: "Networking"
+      type: fields
+      row: 1
+      fields: [...]
+
+    - key: subnets
+      label: "Subnets"
+      type: cross_link_list
+      row: 2          # Subnets and SGs appear side by side on a second row
+      ...
+
+    - key: security_groups
+      label: "Security Groups"
+      type: cross_link_list
+      row: 2
+      ...
+```
+
+Sections sharing the same `row` number are placed in a grid container. Sections without `row` render in the default vertical stack.
+
+## Enrichment Plugins
+
+Some AWS APIs return minimal data (e.g. EKS `list_clusters` returns only names). Use an enricher to fetch additional details:
+
+1. Create `scripts/enrichers/<name>.py` with an `enrich(items, region)` function
+2. Add `enrich: <name>` to the `fetch` section of the resource YAML
+
+Example (`scripts/enrichers/eks.py`):
+```python
+import boto3
+
+def enrich(items, region):
+    client = boto3.client("eks", region_name=region)
+    enriched = []
+    for item in items:
+        name = item.get("cluster_name", "")
+        detail = client.describe_cluster(name=name)["cluster"]
+        enriched.append(detail)
+    return enriched
+```
 
 ## Discovery
 

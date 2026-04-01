@@ -188,6 +188,12 @@ def fetch_all(resource_defs, region):
         if wrap_as and items and isinstance(items[0], str):
             items = [{wrap_as: s} for s in items]
 
+        # Run enricher plugin if specified
+        enrich_name = fetch.get("enrich")
+        if enrich_name:
+            from enrichment import run_enricher
+            items = run_enricher(enrich_name, items, region)
+
         data[key] = items
 
     # Also fetch VPCs (always needed)
@@ -399,10 +405,112 @@ def _escape(s):
     return str(s).replace('"', "'").replace("\n", "\\n")
 
 
-def generate_detail(config, resource_defs, rdef, item, data):
-    """Generate a detail D2 page for a single item."""
+def _render_section(w, config, resource_defs, rdef, item, data, section, indent="  "):
+    """Render a single detail section. Returns True if content was written."""
     from lookups import LOOKUPS
 
+    skey = section["key"]
+    slabel = section["label"]
+    stype = section.get("type", "fields")
+    sicon = section.get("icon")
+
+    if stype == "fields":
+        field_values = []
+        for f in section.get("fields", []):
+            val = item.get(f)
+            if val is None:
+                if f == "main_or_custom":
+                    val = "Main" if any(a.get("Main") for a in item.get("Associations", [])) else "Custom"
+                elif f == "default_or_custom":
+                    val = "Default" if item.get("IsDefault") else "Custom"
+                else:
+                    val = ""
+            field_values.append(_escape(val))
+        text = "\\n".join(field_values)
+        w(f"{indent}{skey}: \"{slabel}\\n{text}\" {{")
+        if sicon:
+            w(f"{indent}  icon: {ICONS[sicon]}")
+        w(f"{indent}}}")
+        return True
+
+    elif stype == "cross_link":
+        lookup_fn = LOOKUPS.get(section.get("lookup"))
+        if lookup_fn:
+            related = lookup_fn(data, item)
+            if related:
+                rel = related[0]
+                target_rdef = resource_defs[section["target"]]
+                rel_id = get_item_id(target_rdef, rel)
+                rel_name = _escape(get_item_name(target_rdef, rel))
+                link = resolve_link(resource_defs, rdef["key"], section["target"], rel_id)
+                w(f"{indent}{skey}: \"{slabel}\\n{rel_name}\" {{")
+                if sicon:
+                    w(f"{indent}  icon: {ICONS[sicon]}")
+                w(f"{indent}  link: {link}")
+                w(f"{indent}}}")
+                return True
+
+    elif stype == "cross_link_list":
+        lookup_fn = LOOKUPS.get(section.get("lookup"))
+        if lookup_fn:
+            related = lookup_fn(data, item)
+            if related:
+                sub = section.get("sub_container")
+                w(f"{indent}{skey}: \"{slabel} ({len(related)})\" {{")
+                layout = get_layout(config)
+                cols = layout.get("grid_columns")
+                gap = layout.get("grid_gap")
+                if cols:
+                    w(f"{indent}  grid-columns: {cols}")
+                if gap:
+                    w(f"{indent}  grid-gap: {gap}")
+                if sub:
+                    grid_link = resolve_grid_link(resource_defs, rdef["key"], section["target"])
+                    w(f"{indent}  link: {grid_link}")
+                    w(f"{indent}  style.font-color: '#000000'")
+                target_rdef = resource_defs[section["target"]]
+                for rel in related:
+                    rel_id = get_item_id(target_rdef, rel)
+                    rel_name = _escape(get_item_name(target_rdef, rel))
+                    rid = safe_id(rel_id)
+                    link = resolve_link(resource_defs, rdef["key"], section["target"], rel_id)
+                    w(f"{indent}  {rid}: \"{rel_name}\\n{rel_id}\" {{")
+                    if sicon:
+                        w(f"{indent}    icon: {ICONS[sicon]}")
+                    w(f"{indent}    link: {link}")
+                    w(f"{indent}  }}")
+                w(f"{indent}}}")
+                return True
+
+    elif stype == "rules":
+        source = section.get("source", "")
+        direction = section.get("direction", "")
+        entries = item.get(source, [])
+        if direction == "inbound":
+            entries = [e for e in entries if not e.get("Egress", False)]
+        elif direction == "outbound":
+            entries = [e for e in entries if e.get("Egress", True)]
+        entries.sort(key=lambda e: e.get("RuleNumber", 0))
+        if entries:
+            rule_lines = "\\n".join(format_rule(e) for e in entries)
+            w(f"{indent}{skey}: \"{slabel}\\n{rule_lines}\" {{")
+            w(f"{indent}}}")
+            return True
+
+    elif stype == "text":
+        source = section.get("source", "")
+        items_list = item.get(source, [])
+        if items_list:
+            text_lines = "\\n".join(format_route(r) for r in items_list)
+            w(f"{indent}{skey}: \"{slabel}\\n{text_lines}\" {{")
+            w(f"{indent}}}")
+            return True
+
+    return False
+
+
+def generate_detail(config, resource_defs, rdef, item, data):
+    """Generate a detail D2 page for a single item."""
     name = get_item_name(rdef, item)
     lines = []
     w = lines.append
@@ -412,92 +520,39 @@ def generate_detail(config, resource_defs, rdef, item, data):
     w(f"  link: {detail_back_link()}")
     w("  style.font-color: '#000000'")
 
-    for section in rdef.get("detail", {}).get("sections", []):
-        skey = section["key"]
-        slabel = section["label"]
-        stype = section.get("type", "fields")
-        sicon = section.get("icon")
+    sections = rdef.get("detail", {}).get("sections", [])
 
-        if stype == "fields":
-            field_values = []
-            for f in section.get("fields", []):
-                val = item.get(f)
-                if val is None:
-                    # Check computed fields
-                    if f == "main_or_custom":
-                        val = "Main" if any(a.get("Main") for a in item.get("Associations", [])) else "Custom"
-                    elif f == "default_or_custom":
-                        val = "Default" if item.get("IsDefault") else "Custom"
-                    else:
-                        val = ""
-                field_values.append(_escape(val))
-            text = "\\n".join(field_values)
-            w(f"  {skey}: \"{slabel}\\n{text}\" {{")
-            if sicon:
-                w(f"    icon: {ICONS[sicon]}")
-            w("  }")
+    # Group sections by row
+    rows = {}
+    ungrouped = []
+    for section in sections:
+        row = section.get("row")
+        if row is not None:
+            rows.setdefault(row, []).append(section)
+        else:
+            ungrouped.append(section)
 
-        elif stype == "cross_link":
-            lookup_fn = LOOKUPS.get(section.get("lookup"))
-            if lookup_fn:
-                related = lookup_fn(data, item)
-                if related:
-                    rel = related[0]
-                    target_rdef = resource_defs[section["target"]]
-                    rel_id = get_item_id(target_rdef, rel)
-                    rel_name = _escape(get_item_name(target_rdef, rel))
-                    link = resolve_link(resource_defs, rdef["key"], section["target"], rel_id)
-                    w(f"  {skey}: \"{slabel}\\n{rel_name}\" {{")
-                    if sicon:
-                        w(f"    icon: {ICONS[sicon]}")
-                    w(f"    link: {link}")
-                    w("  }")
-
-        elif stype == "cross_link_list":
-            lookup_fn = LOOKUPS.get(section.get("lookup"))
-            if lookup_fn:
-                related = lookup_fn(data, item)
-                if related:
-                    sub = section.get("sub_container")
-                    w(f"  {skey}: \"{slabel} ({len(related)})\" {{")
-                    apply_grid(w, config)
-                    if sub:
-                        grid_link = resolve_grid_link(resource_defs, rdef["key"], section["target"])
-                        w(f"    link: {grid_link}")
-                        w("    style.font-color: '#000000'")
-                    target_rdef = resource_defs[section["target"]]
-                    for rel in related:
-                        rel_id = get_item_id(target_rdef, rel)
-                        rel_name = _escape(get_item_name(target_rdef, rel))
-                        rid = safe_id(rel_id)
-                        link = resolve_link(resource_defs, rdef["key"], section["target"], rel_id)
-                        w(f"    {rid}: \"{rel_name}\\n{rel_id}\" {{")
-                        if sicon:
-                            w(f"      icon: {ICONS[sicon]}")
-                        w(f"      link: {link}")
-                        w("    }")
-                    w("  }")
-
-        elif stype == "rules":
-            source = section.get("source", "")
-            direction = section.get("direction", "")
-            entries = item.get(source, [])
-            if direction == "inbound":
-                entries = [e for e in entries if not e.get("Egress", False)]
-            elif direction == "outbound":
-                entries = [e for e in entries if e.get("Egress", True)]
-            entries.sort(key=lambda e: e.get("RuleNumber", 0))
-            if entries:
-                rule_lines = "\\n".join(format_rule(e) for e in entries)
-                w(f"  {skey}: \"{slabel}\\n{rule_lines}\" {{")
-                w("  }")
-
-        elif stype == "text":
-            source = section.get("source", "")
-            items_list = item.get(source, [])
-            if items_list:
-                text_lines = "\\n".join(format_route(r) for r in items_list)
-                w(f"  {skey}: \"{slabel}\\n{text_lines}\" {{")
+    # Render ungrouped sections (no row specified) — backwards compatible
+    if not rows:
+        for section in ungrouped:
+            _render_section(w, config, resource_defs, rdef, item, data, section)
+    else:
+        # Force outer container into grid mode so rows stack properly
+        w("  grid-columns: 1")
+        # Render in order: process sections by their position in the original list
+        # but wrap row groups in grid containers
+        rendered_rows = set()
+        for section in sections:
+            row = section.get("row")
+            if row is None:
+                _render_section(w, config, resource_defs, rdef, item, data, section)
+            elif row not in rendered_rows:
+                rendered_rows.add(row)
+                row_sections = rows[row]
+                w(f"  row_{row}: \" \" {{")
+                w(f"    grid-columns: {len(row_sections)}")
+                for rs in row_sections:
+                    _render_section(w, config, resource_defs, rdef, item, data, rs, indent="    ")
                 w("  }")
 
     w("}")

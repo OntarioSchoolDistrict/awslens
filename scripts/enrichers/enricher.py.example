@@ -1,0 +1,35 @@
+"""Example enricher template.
+
+Copy this file and rename it to match the 'enrich' value in your resource YAML.
+The enrich() function receives the raw fetched items and the AWS region,
+makes additional API calls to augment the data, and returns enriched items.
+
+Usage in resource YAML:
+    fetch:
+      service: eks
+      method: list_clusters
+      result_key: clusters
+      wrap_as: cluster_name
+      enrich: eks           # loads scripts/enrichers/eks.py
+"""
+
+import boto3
+
+
+def enrich(items, region):
+    """Enrich raw items with additional AWS API data.
+
+    Args:
+        items: List of dicts from the initial fetch (after wrap_as/flatten).
+        region: AWS region string.
+
+    Returns:
+        List of enriched dicts.
+    """
+    # client = boto3.client("service", region_name=region)
+    # enriched = []
+    # for item in items:
+    #     detail = client.describe_something(Id=item["id"])["Result"]
+    #     enriched.append(detail)
+    # return enriched
+    return items

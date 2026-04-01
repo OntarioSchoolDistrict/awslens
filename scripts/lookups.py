@@ -72,11 +72,27 @@ def subnets_for_nacl(data, nacl):
     return result
 
 
-# Registry of all lookup functions (referenced by name in YAML files)
+def subnets_for_eks(data, cluster):
+    """Find subnets associated with an EKS cluster."""
+    subnet_ids = cluster.get("subnetIds", [])
+    return [s for s in data.get("subnets", []) if s["SubnetId"] in subnet_ids]
+
+
+def security_groups_for_eks(data, cluster):
+    """Find security groups associated with an EKS cluster."""
+    sg_ids = set(cluster.get("securityGroupIds", []))
+    cluster_sg = cluster.get("clusterSecurityGroupId")
+    if cluster_sg:
+        sg_ids.add(cluster_sg)
+    return [sg for sg in data.get("security_groups", []) if sg["GroupId"] in sg_ids]
+
+
 LOOKUPS = {
     "route_table_for_subnet": route_table_for_subnet,
     "nacl_for_subnet": nacl_for_subnet,
     "security_groups_for_subnet": security_groups_for_subnet,
     "subnets_for_route_table": subnets_for_route_table,
     "subnets_for_nacl": subnets_for_nacl,
+    "subnets_for_eks": subnets_for_eks,
+    "security_groups_for_eks": security_groups_for_eks,
 }
